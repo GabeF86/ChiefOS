@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 
+import { QuickCaptureCard } from "@/components/dashboard/QuickCaptureCard";
 import { TodosCard } from "@/components/dashboard/TodosCard";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,14 +81,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Capture</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-ink-3">
-            Text + voice — ticket 14–15.
-          </CardContent>
-        </Card>
+        <QuickCaptureCard />
 
         <Card>
           <CardHeader>
