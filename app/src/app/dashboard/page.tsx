@@ -1,12 +1,21 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
+import { TodosCard } from "@/components/dashboard/TodosCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Dashboard · ChiefOS",
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = createSupabaseServerClient();
@@ -22,7 +31,7 @@ export default async function DashboardPage() {
             ChiefOS · Dashboard
           </p>
           <h1 className="font-serif text-3xl text-ink mt-1">
-            Good morning, Chief
+            {greeting()}, Chief
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -38,28 +47,54 @@ export default async function DashboardPage() {
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Suspense fallback={<CardSkeleton title="Today + Tomorrow" />}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Today + Tomorrow</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-ink-3">
+              Spinfusion pull lands here — Phase 3.
+            </CardContent>
+          </Card>
+        </Suspense>
+
+        <Suspense fallback={<CardSkeleton title="Todos" />}>
+          <TodosCard />
+        </Suspense>
+
         <Card>
           <CardHeader>
-            <CardTitle>Today + Tomorrow</CardTitle>
+            <CardTitle>Upcoming Meetings</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-ink-3">
-            Spinfusion pull lands here — Phase 3.
+            CRUD lands next batch.
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Todos</CardTitle>
+            <CardTitle>Inbox Summary</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-ink-3">
-            CRUD coming in ticket 7+ of Phase 1.
+            Gmail intake — Phase 4.
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Quick Capture</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-ink-3">
-            Voice + text capture — ticket 14–15.
+            Text + voice — ticket 14–15.
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Cost Tracker</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-ink-3">
+            Wired but empty until first AI call — ticket 16.
           </CardContent>
         </Card>
       </section>
@@ -69,4 +104,27 @@ export default async function DashboardPage() {
       </p>
     </main>
   );
+}
+
+function CardSkeleton({ title }: { title: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2 animate-pulse">
+          <div className="h-3 w-3/4 bg-cream-2 rounded-pill" />
+          <div className="h-3 w-1/2 bg-cream-2 rounded-pill" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function greeting() {
+  const hr = new Date().getHours();
+  if (hr < 12) return "Good morning";
+  if (hr < 17) return "Good afternoon";
+  return "Good evening";
 }
