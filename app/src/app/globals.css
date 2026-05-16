@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Ink scale — text */
+  --ink: #0F172A;
+  --ink-2: #475569;
+  --ink-3: #64748B;
+
+  /* Surface — warm, not stark */
+  --cream: #FAF9F6;
+  --cream-2: #F4F1EA;
+  --surface: #FFFFFF;
+
+  /* Borders */
+  --border: #E5E0D6;
+  --border-2: #D4CDBF;
+
+  /* Accent */
+  --teal: #0F766E;
+  --teal-dark: #134E4A;
+  --teal-soft: #CCE5E2;
+  --gold: #B45309;
+  --gold-soft: #FEF3C7;
+  --emerald: #059669;
+  --red: #B91C1C;
+
+  /* shadcn token compat */
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--cream);
+  --secondary: var(--cream-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--cream-2);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--teal-soft);
+  --accent-foreground: var(--teal-dark);
+  --destructive: var(--red);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--teal);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  body {
+    color: var(--ink);
+    background: var(--cream);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+    font-feature-settings: "ss01";
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
