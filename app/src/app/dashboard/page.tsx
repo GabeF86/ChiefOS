@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 
+import { CostTrackerCard } from "@/components/dashboard/CostTrackerCard";
 import { QuickCaptureCard } from "@/components/dashboard/QuickCaptureCard";
 import { TodosCard } from "@/components/dashboard/TodosCard";
 import { Button } from "@/components/ui/button";
@@ -83,14 +84,9 @@ export default async function DashboardPage() {
 
         <QuickCaptureCard />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Cost Tracker</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-ink-3">
-            Wired but empty until first AI call — ticket 16.
-          </CardContent>
-        </Card>
+        <Suspense fallback={<CardSkeleton title="Cost Tracker" />}>
+          <CostTrackerCard />
+        </Suspense>
       </section>
 
       <p className="text-xs text-ink-3 mt-12 font-mono">
