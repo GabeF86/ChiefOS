@@ -14,6 +14,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", Icon: HomeIcon },
   { href: "/todos", label: "Todos", Icon: ChecklistIcon },
+  { href: "/meetings", label: "Meetings", Icon: CalendarIcon },
   { href: "/costs", label: "Costs", Icon: DollarIcon },
   { href: "/settings/security", label: "More", Icon: GearIcon },
 ];
@@ -30,7 +31,7 @@ export function MobileBottomNav() {
         "pb-[env(safe-area-inset-bottom)]",
       )}
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {NAV.map(({ href, label, Icon }) => {
           const active =
             pathname === href ||
@@ -94,6 +95,25 @@ function ChecklistIcon({ className }: { className?: string }) {
       <path d="m3 14 2 2 4-4" />
       <path d="M11 8h10" />
       <path d="M11 15h10" />
+    </svg>
+  );
+}
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
     </svg>
   );
 }
