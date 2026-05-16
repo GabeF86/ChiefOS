@@ -43,11 +43,21 @@ export function VoiceCaptureButton({ onTranscript }: VoiceCaptureButtonProps) {
       recorder.onstop = async () => {
         const seconds = (Date.now() - startedAtRef.current) / 1000;
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
+        // Strip codec parameter from MIME (e.g. "audio/webm;codecs=opus"
+        // → "audio/webm") so the upload Content-Type stays clean.
+        const baseType = (recorder.mimeType || "audio/webm").split(";")[0];
+        const blob = new Blob(chunksRef.current, { type: baseType });
         if (blob.size === 0) {
           setPhase("idle");
+          return;
+        }
+        if (seconds < 0.3) {
+          setError("Hold the mic a little longer");
+          setPhase("error");
+          window.setTimeout(() => {
+            setPhase("idle");
+            setError(undefined);
+          }, 2000);
           return;
         }
         await upload(blob, seconds);
@@ -75,7 +85,7 @@ export function VoiceCaptureButton({ onTranscript }: VoiceCaptureButtonProps) {
     setPhase("uploading");
     try {
       const ext = blob.type.includes("mp4")
-        ? "mp4"
+        ? "m4a"
         : blob.type.includes("ogg")
           ? "ogg"
           : "webm";
