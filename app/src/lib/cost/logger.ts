@@ -160,6 +160,40 @@ async function logUsage(row: UsageRow): Promise<void> {
   }
 }
 
+/**
+ * Direct chat-cost logger for streaming callers that can't use
+ * `withCostLogging`'s run-and-return shape (the token counts only become
+ * known after the stream finishes).
+ */
+export async function logChatCost(args: {
+  userId: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
+  requestRef?: string;
+}): Promise<void> {
+  const cost_usd = costChat({
+    model: args.model,
+    inputTokens: args.inputTokens,
+    outputTokens: args.outputTokens,
+    cachedInputTokens: args.cachedInputTokens,
+  });
+  void logUsage({
+    user_id: args.userId,
+    provider: providerFor(args.model),
+    model: args.model,
+    operation: "chat",
+    input_tokens: args.inputTokens,
+    output_tokens: args.outputTokens,
+    input_units: null,
+    unit_label: "tokens",
+    cost_usd,
+    request_ref: args.requestRef ?? null,
+    occurred_at: new Date().toISOString(),
+  });
+}
+
 function providerFor(model: string): Provider {
   if (model.startsWith("claude-")) return "anthropic";
   return "openai";

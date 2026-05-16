@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CostTrackerCard } from "@/components/dashboard/CostTrackerCard";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 import { MeetingsCard } from "@/components/dashboard/MeetingsCard";
+import { QuickAskCard } from "@/components/dashboard/QuickAskCard";
 import { QuickCaptureCard } from "@/components/dashboard/QuickCaptureCard";
 import { TodayTomorrowCard } from "@/components/dashboard/TodayTomorrowCard";
 import { TodosCard } from "@/components/dashboard/TodosCard";
@@ -64,13 +65,7 @@ export default async function DashboardPage() {
       />
     ),
     quick_capture: <QuickCaptureCard />,
-    quick_ask: (
-      <ComingSoonCard
-        title="Quick Ask"
-        phase="Phase 2"
-        description="One-shot questions answered from the document vault — wires up once RAG ingestion lands."
-      />
-    ),
+    quick_ask: <QuickAskCard />,
     cost_tracker: (
       <Suspense fallback={<CardSkeleton title="Cost Tracker" />}>
         <CostTrackerCard />
@@ -94,6 +89,9 @@ export default async function DashboardPage() {
             <WeatherBadge />
           </Suspense>
           <div className="hidden md:flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/chat">Ask</Link>
+            </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/meetings">Meetings</Link>
             </Button>

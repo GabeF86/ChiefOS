@@ -14,6 +14,8 @@ function isPublic(pathname: string) {
   return (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/public") ||
+    // GitHub vault webhook authenticates via HMAC, not user cookie.
+    pathname === "/api/vault/webhook" ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js"
