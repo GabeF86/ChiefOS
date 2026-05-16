@@ -3,6 +3,7 @@ import { Fraunces } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { RegisterServiceWorker } from "@/components/RegisterServiceWorker";
 import "./globals.css";
 
@@ -39,7 +40,8 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable} antialiased`}
       >
-        {children}
+        <div className="pb-20 md:pb-0">{children}</div>
+        <MobileBottomNav />
         <RegisterServiceWorker />
       </body>
     </html>

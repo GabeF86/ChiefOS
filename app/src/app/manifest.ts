@@ -14,6 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#FAF9F6",
     categories: ["productivity", "medical"],
     icons: [
+      // Next.js auto-serves icon.tsx at /icon and apple-icon.tsx at /apple-icon.
+      {
+        src: "/apple-icon",
+        sizes: "180x180",
+        type: "image/png",
+        purpose: "any",
+      },
       {
         src: "/icons/icon.svg",
         sizes: "any",
