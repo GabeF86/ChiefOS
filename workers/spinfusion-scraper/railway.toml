@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+# 5 AM Eastern. Cron is UTC on Railway; 09:00 UTC ≈ 5am ET in DST,
+# 10:00 UTC outside DST. Picking 09:30 splits the difference and is close
+# enough — we run once a day and the data window is wide.
+restartPolicyType = "NEVER"
+cronSchedule = "30 9 * * *"
