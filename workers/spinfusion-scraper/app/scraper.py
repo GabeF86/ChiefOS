@@ -1,11 +1,16 @@
-"""Spinfusion scraper — Playwright skeleton.
+"""Spinfusion (symplr Physician Scheduling) scraper.
 
-WHY SO SKELETAL: the real Spinfusion DOM is not in this repo. The selectors
-and login flow below are *placeholders* — record a session against the real
-UI (Playwright codegen) and fill them in.
+Logs into Spinfusion, runs a saved report, captures the CSV download, and
+parses it into AssignmentRow records. The CSV has columns:
+
+    Name, Date, Schedule, Assignment, Hours
+
+Schedule maps to role ("Physician - …" → MD, "CRNA - …" → CRNA). Hours is
+ignored. Date is MM/DD/YYYY.
 
 Public surface:
-    async scrape(days_ahead: int) -> list[AssignmentRow]
+    async scrape(cfg: ScrapeConfig) -> list[AssignmentRow]
+    parse_report_csv(path, cfg) -> list[AssignmentRow]   # pure, testable
 
 Both login and parse raise ScraperError on failure so the entrypoint can
 classify the run and decide whether to alert.
@@ -14,10 +19,11 @@ classify the run and decide whether to alert.
 from __future__ import annotations
 
 import asyncio
+import csv
 import os
-import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import List, Optional
 
 from playwright.async_api import (
@@ -36,15 +42,19 @@ class ScraperError(RuntimeError):
 
 @dataclass
 class ScrapeConfig:
+    org: str
     username: str
     password: str
     login_url: str
-    schedule_url: str
+    report_name: str
     site: str
     user_id: str
     days_ahead: int
-    # Where to dump the last successfully-loaded HTML on parse failure.
-    debug_html_path: str = "/tmp/spinfusion-last.html"
+    # If set, skip Playwright entirely and parse this local CSV file.
+    # Useful for development while the download flow isn't automated yet.
+    local_csv_path: Optional[str] = None
+    # When True, run Chromium with a visible window (debugging only).
+    headed: bool = False
 
 
 def config_from_env() -> ScrapeConfig:
@@ -55,48 +65,59 @@ def config_from_env() -> ScrapeConfig:
         return v
 
     return ScrapeConfig(
+        org=req("SPINFUSION_ORG"),
         username=req("SPINFUSION_USERNAME"),
         password=req("SPINFUSION_PASSWORD"),
         login_url=req("SPINFUSION_LOGIN_URL"),
-        schedule_url=req("SPINFUSION_SCHEDULE_URL"),
+        report_name=os.environ.get(
+            "SPINFUSION_REPORT_NAME", "Paoli — MDs + CRNAs (rolling 4 weeks)"
+        ),
         site=os.environ.get("SITE_NAME", "Paoli"),
         user_id=req("CHIEFOS_VAULT_USER_ID"),
-        days_ahead=int(os.environ.get("DAYS_AHEAD", "7")),
+        days_ahead=int(os.environ.get("DAYS_AHEAD", "28")),
+        local_csv_path=os.environ.get("SPINFUSION_LOCAL_CSV") or None,
+        headed=os.environ.get("SPINFUSION_HEADED") == "1",
     )
 
 
 async def scrape(cfg: ScrapeConfig) -> List[AssignmentRow]:
+    """Run one scrape: download report (or read local CSV) → parse → return."""
+    if cfg.local_csv_path:
+        return parse_report_csv(cfg.local_csv_path, cfg)
+
     async with async_playwright() as pw:
-        browser: Browser = await pw.chromium.launch(headless=True)
-        context = await browser.new_context()
+        browser: Browser = await pw.chromium.launch(
+            headless=not cfg.headed,
+            slow_mo=150 if cfg.headed else 0,
+        )
+        context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
         try:
             await _login(page, cfg)
-            html = await _load_schedule(page, cfg)
-            try:
-                rows = _parse_schedule(html, cfg)
-            except Exception as e:
-                _dump_html(html, cfg.debug_html_path)
-                raise ScraperError(f"parse failed: {e}") from e
-            return rows
+            csv_path = await _download_report(page, cfg)
+            return parse_report_csv(csv_path, cfg)
         finally:
             await context.close()
             await browser.close()
 
 
 async def _login(page: Page, cfg: ScrapeConfig, attempts: int = 3) -> None:
+    """Spinfusion login: Organization → Username → Password → Login.
+
+    The org field has no accessible label that Playwright can match by role,
+    so we target the first Angular Material input by id (mat-input-0). The
+    other two fields are addressable by their visible label.
+    """
     last_err: Optional[Exception] = None
     for i in range(attempts):
         try:
             await page.goto(cfg.login_url, wait_until="networkidle")
-            # TODO: replace these selectors with the real form fields.
-            await page.fill('input[name="username"]', cfg.username)
-            await page.fill('input[name="password"]', cfg.password)
-            await page.click('button[type="submit"]')
-            # TODO: replace with a real post-login indicator.
-            await page.wait_for_url(
-                lambda url: cfg.login_url not in url,
-                timeout=15_000,
+            await page.locator("#mat-input-0").fill(cfg.org)
+            await page.get_by_role("textbox", name="Username").fill(cfg.username)
+            await page.get_by_role("textbox", name="Password").fill(cfg.password)
+            await page.get_by_role("button", name="Login", exact=True).click()
+            await page.get_by_role("link", name="Schedules").wait_for(
+                state="visible", timeout=15_000
             )
             return
         except PWTimeout as e:
@@ -105,60 +126,116 @@ async def _login(page: Page, cfg: ScrapeConfig, attempts: int = 3) -> None:
     raise ScraperError(f"login failed after {attempts} attempts: {last_err}")
 
 
-async def _load_schedule(page: Page, cfg: ScrapeConfig) -> str:
-    await page.goto(cfg.schedule_url, wait_until="networkidle")
-    # TODO: if the schedule view requires interactions (date range, site filter,
-    # etc.), do them here before extracting HTML.
-    return await page.content()
+async def _download_report(page: Page, cfg: ScrapeConfig) -> str:
+    """Drive the Tools → Assignment Data Dump form: pick `This Week` from the
+    date-range shortcuts, set Export Type = CSV, select both schedules
+    (Physician + CRNA Paoli Work), submit, and capture the download.
 
-
-def _parse_schedule(html: str, cfg: ScrapeConfig) -> List[AssignmentRow]:
-    """Parse the schedule HTML into AssignmentRow objects.
-
-    This is a stub — the real parser depends on the Spinfusion table structure.
-    Two suggested approaches:
-
-    1. BeautifulSoup over the rendered HTML — easiest if rows are static.
-    2. Re-query Playwright for structured selectors (page.locator) before
-       handing HTML to this function.
-
-    For now we return [] so the dashboard's empty state surfaces honestly.
-    A non-empty stub helps integration tests; toggle DEBUG_STUB_ROWS=1 to get
-    fake data shaped like real output.
+    Returns the absolute path to the saved CSV.
     """
-    if os.environ.get("DEBUG_STUB_ROWS") == "1":
-        today = date.today()
-        return [
-            AssignmentRow(
-                user_id=cfg.user_id,
-                date=(today + timedelta(days=d)).isoformat(),
-                provider_name=name,
-                role=role,
-                site=cfg.site,
-                assignment_text=slot,
-            )
-            for d in range(min(cfg.days_ahead, 2))
-            for (name, role, slot) in [
-                ("Farkas, G.", "MD", "OR 1 *"),
-                ("Smith, A.", "MD", "OR 3"),
-                ("Jones, B.", "CRNA", "OR 1"),
-                ("Lee, C.", "CRNA", "OR 5 (call)"),
-            ]
-        ]
+    _ = cfg  # site-specific schedule names are currently hardcoded; revisit.
 
-    # Real implementation goes here. Leaving structure visible:
+    # 1. Navigate into the form via the left sidenav.
+    await page.get_by_role("link", name="Assignment Data Dump").click()
+    await page.wait_for_selector("spin-daterange", timeout=15_000)
+
+    # 2. Open the date picker, pick "This Week" from the Shortcuts list.
+    await page.locator("spin-daterange .date-display").first.click()
+    await page.get_by_text("Shortcuts", exact=True).click()
+    await page.get_by_text("This Week", exact=True).click()
+    # If the picker doesn't auto-close on a shortcut, dismiss it.
+    await page.keyboard.press("Escape")
+
+    # 3. Export Type → CSV (ng-select single).
+    await page.locator('ng-select[name="exportType"]').click()
+    await page.locator(".ng-option").get_by_text("CSV", exact=True).click()
+
+    # 4. Schedules → Physician + CRNA (ng-select multi).
+    await page.locator('ng-select[name="selectedScheds"]').click()
+    await page.locator(".ng-option").get_by_text(
+        "Physician - Paoli Work", exact=True
+    ).click()
+    await page.locator(".ng-option").get_by_text(
+        "CRNA - Paoli Work", exact=True
+    ).click()
+    await page.keyboard.press("Escape")
+
+    # 5. Submit and capture the resulting CSV download.
+    async with page.expect_download(timeout=60_000) as dl_info:
+        await page.get_by_role("button", name="Submit").click()
+    download = await dl_info.value
+
+    out = Path("/tmp") / f"spinfusion-{datetime.now():%Y%m%d-%H%M%S}.csv"
+    await download.save_as(out)
+    return str(out)
+
+
+def parse_report_csv(path: str | Path, cfg: ScrapeConfig) -> List[AssignmentRow]:
+    """Parse a Spinfusion report CSV (Name,Date,Schedule,Assignment,Hours)
+    into AssignmentRow records, filtered to [today, today + days_ahead].
+    """
+    today = date.today()
+    cutoff = today + timedelta(days=cfg.days_ahead)
     rows: List[AssignmentRow] = []
-    # Example pattern: lines like "Farkas, G. OR 1 *"
-    _line_re = re.compile(
-        r"^(?P<name>[^\t]+?)\s+(?P<slot>(OR \d+|Call|Off|Late|Early)[^\n]*)$"
-    )
-    _ = _line_re, html, datetime  # silence unused-import warnings until wired
+
+    try:
+        fh = open(path, newline="", encoding="utf-8-sig")
+    except FileNotFoundError as e:
+        raise ScraperError(f"report CSV not found: {path}") from e
+
+    with fh:
+        reader = csv.DictReader(fh)
+        required = {"Name", "Date", "Schedule", "Assignment"}
+        missing = required - set(reader.fieldnames or [])
+        if missing:
+            raise ScraperError(
+                f"report CSV missing columns: {sorted(missing)} (got {reader.fieldnames})"
+            )
+
+        for r in reader:
+            d = _parse_csv_date(r.get("Date"))
+            if d is None or d < today or d > cutoff:
+                continue
+            role = _role_from_schedule(r.get("Schedule", ""))
+            if role is None:
+                continue
+            name = (r.get("Name") or "").strip()
+            slot = (r.get("Assignment") or "").strip()
+            if not name or not slot:
+                continue
+            rows.append(
+                AssignmentRow(
+                    user_id=cfg.user_id,
+                    date=d.isoformat(),
+                    provider_name=name,
+                    role=role,
+                    site=cfg.site,
+                    assignment_text=slot,
+                )
+            )
+
     return rows
 
 
-def _dump_html(html: str, path: str) -> None:
+def _parse_csv_date(text: Optional[str]) -> Optional[date]:
+    if not text:
+        return None
     try:
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(html)
-    except OSError:
-        pass
+        return datetime.strptime(text.strip(), "%m/%d/%Y").date()
+    except ValueError:
+        return None
+
+
+def _role_from_schedule(schedule: str) -> Optional[str]:
+    """Map the Schedule column to a role.
+
+    Examples:
+      'Physician - Paoli Work' -> 'MD'
+      'CRNA - Paoli Work'      -> 'CRNA'
+    """
+    s = (schedule or "").strip().lower()
+    if s.startswith("physician"):
+        return "MD"
+    if s.startswith("crna"):
+        return "CRNA"
+    return None

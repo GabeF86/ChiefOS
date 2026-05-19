@@ -73,9 +73,14 @@ function DayBlock({ day }: { day: DayAssignments }) {
       <p className="font-mono text-[11px] uppercase tracking-widest text-ink-3 mb-2">
         {label}
       </p>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        <RoleColumn title="MDs" rows={day.mds} />
-        <RoleColumn title="CRNAs" rows={day.crnas} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+        <RoleColumn
+          title="MDs"
+          count={day.mdCount}
+          countSuffix="Includes Call Doc"
+          rows={day.mds}
+        />
+        <RoleColumn title="CRNAs" count={day.crnaCount} rows={day.crnas} />
       </div>
       {day.other.length > 0 && (
         <ul className="mt-2 text-xs text-ink-3 space-y-0.5">
@@ -93,9 +98,13 @@ function DayBlock({ day }: { day: DayAssignments }) {
 
 function RoleColumn({
   title,
+  count,
+  countSuffix,
   rows,
 }: {
   title: string;
+  count: number;
+  countSuffix?: string;
   rows: Array<{
     id: string;
     provider_name: string;
@@ -105,7 +114,14 @@ function RoleColumn({
   return (
     <div>
       <p className="text-[10px] font-mono uppercase tracking-widest text-ink-3 mb-1">
-        {title}
+        <span className="text-ink-2">
+          {title} · {count}
+        </span>
+        {countSuffix && (
+          <span className="ml-2 text-ink-3/80 normal-case tracking-normal">
+            (includes Call Doc)
+          </span>
+        )}
       </p>
       {rows.length === 0 ? (
         <p className="text-xs text-ink-3">—</p>
@@ -114,7 +130,7 @@ function RoleColumn({
           {rows.map((r) => (
             <li
               key={r.id}
-              className="text-xs text-ink truncate"
+              className="text-xs text-ink"
               title={`${r.provider_name} — ${r.assignment_text}`}
             >
               <span className="text-ink">{r.provider_name}</span>

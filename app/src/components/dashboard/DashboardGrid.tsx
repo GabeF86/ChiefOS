@@ -18,6 +18,12 @@ interface DashboardGridProps {
   saveCollapsed: (key: string, collapsed: boolean) => Promise<void>;
 }
 
+// Per-card grid spans. The MD/CRNA card carries the longest text on the
+// dashboard (`cPaoliTrBeep 11p-7a` etc.) so it gets a wider slot at lg.
+const CARD_SPAN: Record<string, string | undefined> = {
+  spinfusion: "lg:col-span-2",
+};
+
 export function DashboardGrid({
   initialOrder,
   initialCollapsed,
@@ -132,6 +138,7 @@ export function DashboardGrid({
               isDragOver={overKey === key && draggedKey !== key}
               canMoveUp={i > 0}
               canMoveDown={i < arr.length - 1}
+              extraClassName={CARD_SPAN[key]}
               onToggleCollapsed={() => toggleCollapsed(key)}
               onDragStart={() => setDraggedKey(key)}
               onDragEnd={() => {
@@ -163,6 +170,7 @@ interface SlotProps {
   isDragOver: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  extraClassName?: string;
   onToggleCollapsed: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -181,6 +189,7 @@ function CardSlot({
   isDragOver,
   canMoveUp,
   canMoveDown,
+  extraClassName,
   onToggleCollapsed,
   onDragStart,
   onDragEnd,
@@ -223,6 +232,7 @@ function CardSlot({
         // Hide all children of the Card after the header when collapsed.
         collapsed &&
           "[&>div>*:not(:first-child)]:hidden [&>div>:first-child]:pb-6",
+        extraClassName,
       )}
     >
       {editMode && (
