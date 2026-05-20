@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 
+import { CaseRequestsCard } from "@/components/dashboard/CaseRequestsCard";
 import { CostTrackerCard } from "@/components/dashboard/CostTrackerCard";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 import { MeetingsCard } from "@/components/dashboard/MeetingsCard";
@@ -47,6 +48,11 @@ export default async function DashboardPage() {
 
   const cards: Record<string, ReactNode> = {
     spinfusion: <TodayTomorrowCard />,
+    case_requests: (
+      <Suspense fallback={<CardSkeleton title="Case requests" />}>
+        <CaseRequestsCard />
+      </Suspense>
+    ),
     todos: (
       <Suspense fallback={<CardSkeleton title="Todos" />}>
         <TodosCard />
@@ -61,7 +67,7 @@ export default async function DashboardPage() {
       <ComingSoonCard
         title="Inbox Summary"
         phase="Phase 4"
-        description="Forwarded emails to paolianesthesia@gmail.com appear here once intake is wired up."
+        description="Forwarded emails to farkas@paolianesthesia.com appear here once intake is wired up."
       />
     ),
     quick_capture: <QuickCaptureCard />,

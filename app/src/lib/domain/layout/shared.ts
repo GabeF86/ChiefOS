@@ -5,6 +5,7 @@
 
 export const DEFAULT_CARD_ORDER = [
   "spinfusion",
+  "case_requests",
   "todos",
   "meetings",
   "inbox",
