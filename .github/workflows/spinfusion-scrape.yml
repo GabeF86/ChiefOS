@@ -1,0 +1,39 @@
+name: spinfusion-scrape
+
+on:
+  schedule:
+    # 09:30 UTC daily (~5:30am ET in DST, 4:30am ET outside DST). Matches the
+    # original Railway schedule. GH Actions cron is UTC; runs are best-effort
+    # but a daily scrape can tolerate small delays.
+    - cron: '30 9 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    # Run inside the same Playwright image the worker uses on Railway so
+    # the bundled Chromium matches the pinned playwright==1.60.0 install.
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.60.0-jammy
+    defaults:
+      run:
+        working-directory: workers/spinfusion-scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install worker package + deps
+        run: pip install --no-cache-dir .
+
+      - name: Run scraper
+        env:
+          SPINFUSION_ORG: ${{ secrets.SPINFUSION_ORG }}
+          SPINFUSION_USERNAME: ${{ secrets.SPINFUSION_USERNAME }}
+          SPINFUSION_PASSWORD: ${{ secrets.SPINFUSION_PASSWORD }}
+          SPINFUSION_LOGIN_URL: ${{ secrets.SPINFUSION_LOGIN_URL }}
+          # SPINFUSION_REPORT_NAME intentionally unset — code default applies.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CHIEFOS_VAULT_USER_ID: ${{ secrets.CHIEFOS_VAULT_USER_ID }}
+          DAYS_AHEAD: '28'
+          SITE_NAME: Paoli
+        run: python -m app.main
