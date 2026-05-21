@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "ChiefOS Spinfusion assignment scraper (Railway worker)"
 requires-python = ">=3.10"
 dependencies = [
-  "playwright>=1.47",
+  "playwright==1.60.0",
   "supabase>=2.7",
   "python-dotenv>=1.0",
   "pydantic>=2.8",

@@ -1,6 +1,6 @@
 # Playwright bundles its own Chromium and matching system deps. Use the
 # official Python-on-Playwright image so we don't have to install browsers.
-FROM mcr.microsoft.com/playwright/python:v1.47.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.60.0-jammy
 
 WORKDIR /app
 
