@@ -2,7 +2,7 @@
 name = "spinfusion-scraper"
 version = "0.1.0"
 description = "ChiefOS Spinfusion assignment scraper (Railway worker)"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "playwright>=1.47",
   "supabase>=2.7",
