@@ -1,0 +1,16 @@
+# Anything not needed to build/run the scraper inside the Docker image.
+# Railway also respects this during `railway up` uploads.
+
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.git/
+.DS_Store
+*.log
